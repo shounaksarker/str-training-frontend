@@ -30,6 +30,7 @@ for (const fixture of [
 ] as const) {
   test(`${fixture.rating} score: dashboard to result`, async ({ page, request }) => {
     await request.post("http://127.0.0.1:8010/__reset", { data: { rating: fixture.rating } });
+    if (fixture.rating === "medium") await page.setViewportSize({ width: 390, height: 844 });
     await startCase(page);
     await fillAssumptions(page, fixture.mid);
     if (fixture.rating === "medium") {
@@ -49,6 +50,8 @@ for (const fixture of [
       await expect(page.getByRole("textbox", { name: "Category 1" })).toHaveValue("Furniture");
       await expect(page.getByRole("spinbutton", { name: "Monthly amount" })).toHaveValue("450");
       await expect(page.getByRole("checkbox", { name: "Furnished" })).toBeChecked();
+      const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(documentWidth).toBeLessThanOrEqual(390);
     }
     await page.getByRole("button", { name: "Review & submit" }).click();
     await page.getByRole("button", { name: "Confirm submission" }).click();

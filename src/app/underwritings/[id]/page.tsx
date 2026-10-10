@@ -40,7 +40,7 @@ export default async function UnderwritingPage({ params }: { params: Promise<{ i
           <Badge className={isSubmitted ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>{isSubmitted ? "Submitted" : "Draft in progress"}</Badge>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[250px_1fr]">
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
           <Card className="h-fit rounded-2xl border-0 p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Case progress</p>
             <ol className="mt-5 space-y-5">
@@ -50,7 +50,7 @@ export default async function UnderwritingPage({ params }: { params: Promise<{ i
             </ol>
           </Card>
 
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             {isSubmitted ? <Card className="rounded-2xl border-0 p-7 shadow-sm ring-1 ring-slate-200"><h2 className="text-xl font-semibold">Case submitted</h2><p className="mt-2 text-sm text-slate-600">This underwriting is complete and can no longer be edited.</p></Card> : <UnderwritingForm initialUnderwriting={underwriting} />}
           <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center gap-3"><House aria-hidden="true" className="size-5 text-slate-500" /><div><p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selected property</p><p className="mt-1 text-sm font-semibold">{address || underwriting.zpid}</p></div></div>{underwriting.zpid && <Link href={`/properties/${underwriting.zpid}`} className="mt-4 inline-block text-sm font-semibold text-teal-700 hover:text-teal-900">View property details</Link>}</Card>
           </div>
