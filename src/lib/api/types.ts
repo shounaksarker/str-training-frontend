@@ -69,13 +69,54 @@ export interface UnderwritingRead {
   bedrooms: number | null;
   bathrooms: string | null;
   purchase_price: string | null;
+  total_oop: string | null;
+  prr: string | null;
   low_gross_revenue: string | null;
   mid_gross_revenue: string | null;
   high_gross_revenue: string | null;
+  l_cash_on_cash: string | null;
+  m_cash_on_cash: string | null;
+  h_cash_on_cash: string | null;
   updated_at: string | null;
   detail: {
-    purchase_details: Record<string, unknown> | null;
-    forecasted_revenue: Record<string, unknown> | null;
+    purchase_details: PurchaseDetails | null;
+    forecasted_revenue: ForecastedRevenue | null;
     analyst_notes: string | null;
   } | null;
+  taxes: UnderwritingTaxes | null;
+}
+
+export interface PurchaseDetails {
+  purchase_price: string;
+  down_payment_pct: string;
+  interest_rate: string;
+  mortgage_years: number;
+  closing_costs_pct: string;
+  down_payment_amount?: string;
+  loan_amount?: string;
+  closing_costs_amount?: string;
+}
+
+export interface ForecastedRevenue {
+  co_hosting_fee_pct: string;
+  annual_re_appreciation_pct: string;
+  scenarios: {
+    low: { forecasted_revenue: string };
+    mid: { forecasted_revenue: string };
+    high: { forecasted_revenue: string };
+  };
+}
+
+export interface UnderwritingTaxes {
+  land_assumptions_pct: string | null;
+  sla_multiplier_pct: string | null;
+  bonus_amount_pct: string | null;
+  tax_rate_pct: string | null;
+  tax_savings: string | null;
+}
+
+export interface SaveUnderwritingPayload {
+  purchase_details?: PurchaseDetails;
+  forecasted_revenue?: ForecastedRevenue;
+  taxes?: Pick<UnderwritingTaxes, "land_assumptions_pct" | "sla_multiplier_pct" | "bonus_amount_pct" | "tax_rate_pct">;
 }
