@@ -120,3 +120,30 @@ export interface SaveUnderwritingPayload {
   forecasted_revenue?: ForecastedRevenue;
   taxes?: Pick<UnderwritingTaxes, "land_assumptions_pct" | "sla_multiplier_pct" | "bonus_amount_pct" | "tax_rate_pct">;
 }
+
+export interface SubmissionRead {
+  id: number;
+  underwriting_id: number;
+  reference_underwriting_id: number | null;
+  zpid: string;
+  rating: AccuracyRating;
+  accuracy: string;
+  breakdown: {
+    rating: AccuracyRating;
+    accuracy: string;
+    metric: string;
+    label: string;
+    candidate: string | null;
+    reference: string | null;
+    deviation: string;
+    best_threshold: string;
+    medium_threshold: string;
+  };
+  submitted_at: string;
+}
+
+export interface SubmitUnderwritingResult {
+  submission: SubmissionRead;
+  underwriting: UnderwritingRead;
+  dashboard: DashboardResult;
+}

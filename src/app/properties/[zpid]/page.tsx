@@ -68,7 +68,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ zpid:
             <div className="space-y-3 text-sm text-slate-600"><p><span className="mr-3 font-semibold text-teal-700">01</span> Enter your assumptions</p><p><span className="mr-3 font-semibold text-teal-700">02</span> Save your draft</p><p><span className="mr-3 font-semibold text-teal-700">03</span> Submit and review results</p></div>
             <div className="mt-7">
               {activeId ? <Link href={`/underwritings/${activeId}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900 px-5 text-sm font-medium text-white hover:bg-slate-700">Continue draft</Link> : <StartCaseButton zpid={property.zpid} />}
-              {progress?.attempts ? <p className="mt-3 text-xs text-slate-500">{progress.attempts} previous {progress.attempts === 1 ? "attempt" : "attempts"}</p> : null}
+              {progress?.latest_submission_id ? <p className="mt-3 text-sm"><Link href={`/submissions/${progress.latest_submission_id}`} className="font-medium text-teal-700 hover:text-teal-900">View latest result</Link><span className="ml-2 text-xs text-slate-500">· {progress.attempts} {progress.attempts === 1 ? "attempt" : "attempts"}</span></p> : null}
             </div>
           </Card>
         </div>

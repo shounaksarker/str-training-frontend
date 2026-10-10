@@ -24,8 +24,12 @@ const coverStyles: Record<number, string> = {
 };
 
 function getCaseLink(property: DashboardProperty) {
+  // todo: property status -> should be in "constants"
   if (property.status === "in_progress" && property.active_underwriting_id) {
     return `/underwritings/${property.active_underwriting_id}`;
+  }
+  if (property.status === "submitted" && property.latest_submission_id) {
+    return `/submissions/${property.latest_submission_id}`;
   }
   return `/properties/${property.zpid}`;
 }
@@ -33,13 +37,13 @@ function getCaseLink(property: DashboardProperty) {
 export function PropertyCard({ property }: { property: DashboardProperty }) {
   const street = property.address?.split(",")[0] ?? "Address unavailable";
   const place = [property.city, property.state].filter(Boolean).join(", ");
-  const action = property.status === "in_progress" ? "Continue case" : property.status === "submitted" ? "Try again" : "Start case";
+  const action = property.status === "in_progress" ? "Continue case" : property.status === "submitted" ? "View result" : "Start case";
   const accuracy = property.latest_accuracy === null ? null : Math.round(Number(property.latest_accuracy));
   const bestAccuracy = property.best_accuracy === null ? null : Math.round(Number(property.best_accuracy));
 
   return (
     <Card className="gap-0 overflow-hidden rounded-2xl border-0 py-0 shadow-sm ring-1 ring-slate-200 transition-shadow hover:shadow-md">
-      <div className={`relative h-44 overflow-hidden bg-gradient-to-br ${coverStyles[property.market_id ?? 0] ?? "from-slate-500 to-slate-700"}`}>
+      <div className={`relative h-44 overflow-hidden bg-linear-to-br ${coverStyles[property.market_id ?? 0] ?? "from-slate-500 to-slate-700"}`}>
         <div aria-hidden="true" className="absolute -bottom-30 -right-10 size-70 rounded-full border border-white/20 bg-white/5" />
         <div aria-hidden="true" className="absolute -bottom-22 right-20 size-52 rounded-full border border-white/15" />
         <House aria-hidden="true" className="absolute bottom-6 right-7 size-20 stroke-[1.1] text-white/35" />

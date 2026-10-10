@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, LoaderCircle, Save } from "lucide-react";
+import { ArrowRight, Check, LoaderCircle, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -91,16 +92,24 @@ function NumberField({ label, value, onChange, suffix, min = 0, max, step = "0.0
 }
 
 export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting: UnderwritingRead }) {
+  const router = useRouter();
   const [values, setValues] = useState(() => initialValues(initialUnderwriting));
   const [underwriting, setUnderwriting] = useState(initialUnderwriting);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function update(field: keyof FormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
+    setHasUnsavedChanges(true);
+    setConfirming(false);
     setMessage(null);
     setError(null);
+    setSubmitError(null);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -191,11 +200,29 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
         throw new Error(typeof data.detail === "string" ? data.detail : "Could not save this draft");
       }
       setUnderwriting(data as UnderwritingRead);
+      setHasUnsavedChanges(false);
       setMessage(data.total_oop === null ? "Draft saved. Complete all three sections to see calculated returns." : "Draft saved. The figures below come from the backend calculation.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save this draft");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submit() {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch(`/api/underwritings/${underwriting.id}/submit`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof data.detail === "string" ? data.detail : "Could not submit this case");
+      }
+      router.replace(`/submissions/${data.submission.id}`);
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : "Could not submit this case");
+      setSubmitting(false);
+      setConfirming(false);
     }
   }
 
@@ -257,6 +284,27 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
           <div className="mt-5 overflow-x-auto"><table className="w-full min-w-100 text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th className="pb-3 font-medium">Scenario</th><th className="pb-3 font-medium">Annual revenue</th><th className="pb-3 font-medium">Cash on cash</th></tr></thead><tbody className="divide-y divide-slate-100"><tr><th className="py-3 font-medium">Low</th><td>{money(underwriting.low_gross_revenue)}</td><td>{percent(underwriting.l_cash_on_cash)}</td></tr><tr><th className="py-3 font-medium">Mid</th><td>{money(underwriting.mid_gross_revenue)}</td><td>{percent(underwriting.m_cash_on_cash)}</td></tr><tr><th className="py-3 font-medium">High</th><td>{money(underwriting.high_gross_revenue)}</td><td>{percent(underwriting.h_cash_on_cash)}</td></tr></tbody></table></div>
         </Card>
       )}
+
+      <Card className="rounded-2xl border-0 bg-[#13243a] p-6 text-white shadow-sm sm:p-7">
+        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-200">FINAL STEP</p>
+        <h2 className="mt-2 text-xl font-semibold">Submit your analysis</h2>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Your saved Mid revenue forecast will be compared with the analyst reference. You can start a new attempt after reviewing the result.</p>
+        {!hasCalculation && <p className="mt-4 text-sm text-amber-200">Complete and save purchase, revenue, and tax assumptions first.</p>}
+        {hasCalculation && hasUnsavedChanges && <p className="mt-4 text-sm text-amber-200">Save your latest changes before submitting.</p>}
+        {confirming ? (
+          <div className="mt-5 rounded-xl border border-white/20 bg-white/10 p-4">
+            <p className="text-sm font-semibold">Submit this saved forecast?</p>
+            <p className="mt-1 text-sm text-slate-300">Mid annual revenue: {money(underwriting.mid_gross_revenue)}. The case becomes read-only after submission.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button type="button" disabled={submitting} onClick={submit} className="bg-white text-slate-900 hover:bg-slate-100">{submitting ? <><LoaderCircle aria-hidden="true" className="animate-spin" /> Submitting...</> : <>Confirm submission <ArrowRight aria-hidden="true" /></>}</Button>
+              <Button type="button" variant="outline" disabled={submitting} onClick={() => setConfirming(false)} className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white">Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="button" disabled={!hasCalculation || hasUnsavedChanges || saving} onClick={() => setConfirming(true)} className="mt-5 bg-white text-slate-900 hover:bg-slate-100">Review & submit <ArrowRight aria-hidden="true" /></Button>
+        )}
+        {submitError && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{submitError}</p>}
+      </Card>
     </div>
   );
 }

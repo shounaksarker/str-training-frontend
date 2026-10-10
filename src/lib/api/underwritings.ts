@@ -1,6 +1,6 @@
 import { fetchBackend } from "./client";
 import { BACKEND_ENDPOINTS } from "./endpoints";
-import type { SaveUnderwritingPayload, UnderwritingRead } from "./types";
+import type { SaveUnderwritingPayload, SubmitUnderwritingResult, UnderwritingRead } from "./types";
 
 export function getUnderwriting(id: number): Promise<UnderwritingRead> {
   return fetchBackend<UnderwritingRead>(BACKEND_ENDPOINTS.underwriting(id));
@@ -19,5 +19,11 @@ export function saveUnderwriting(id: number, payload: SaveUnderwritingPayload): 
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  });
+}
+
+export function submitUnderwriting(id: number): Promise<SubmitUnderwritingResult> {
+  return fetchBackend<SubmitUnderwritingResult>(BACKEND_ENDPOINTS.submitUnderwriting(id), {
+    method: "POST",
   });
 }
