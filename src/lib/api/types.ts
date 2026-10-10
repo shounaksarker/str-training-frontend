@@ -71,6 +71,8 @@ export interface UnderwritingRead {
   purchase_price: string | null;
   total_oop: string | null;
   prr: string | null;
+  optimization_total: string | null;
+  operating_expense_total: string | null;
   low_gross_revenue: string | null;
   mid_gross_revenue: string | null;
   high_gross_revenue: string | null;
@@ -84,6 +86,21 @@ export interface UnderwritingRead {
     analyst_notes: string | null;
   } | null;
   taxes: UnderwritingTaxes | null;
+  optimization_items: Array<OptimizationItem & { id: number }>;
+  operating_expenses: Array<OperatingExpense & { id: number }>;
+  turnkey: boolean | null;
+  furnished: boolean | null;
+  luxury: boolean | null;
+  tax_efficient: boolean | null;
+  new_construction: boolean | null;
+  existing_airbnb: boolean | null;
+  arv: boolean | null;
+  high_cash_on_cash: boolean | null;
+  low_cash_on_cash: boolean | null;
+  add_inground_pool: boolean | null;
+  waterfront: boolean | null;
+  remote: boolean | null;
+  can_support_cohost: boolean | null;
 }
 
 export interface PurchaseDetails {
@@ -101,11 +118,45 @@ export interface ForecastedRevenue {
   co_hosting_fee_pct: string;
   annual_re_appreciation_pct: string;
   scenarios: {
-    low: { forecasted_revenue: string };
-    mid: { forecasted_revenue: string };
-    high: { forecasted_revenue: string };
+    low: RevenueScenario;
+    mid: RevenueScenario;
+    high: RevenueScenario;
   };
 }
+
+export interface RevenueScenario {
+  forecasted_revenue: string;
+  net_operating_income?: string;
+  annual_free_cash_flow?: string;
+}
+
+export interface OptimizationItem {
+  category: string | null;
+  total_price: string | null;
+}
+
+export interface OperatingExpense {
+  expense_name: string | null;
+  monthly_amount: string | null;
+}
+
+export const DEAL_TAGS = [
+  ["turnkey", "Turnkey"],
+  ["furnished", "Furnished"],
+  ["luxury", "Luxury"],
+  ["tax_efficient", "Tax efficient"],
+  ["new_construction", "New construction"],
+  ["existing_airbnb", "Existing Airbnb"],
+  ["arv", "ARV"],
+  ["high_cash_on_cash", "High cash-on-cash"],
+  ["low_cash_on_cash", "Low cash-on-cash"],
+  ["add_inground_pool", "Add in-ground pool"],
+  ["waterfront", "Waterfront"],
+  ["remote", "Remote"],
+  ["can_support_cohost", "Can support co-host"],
+] as const;
+
+export type DealTagKey = (typeof DEAL_TAGS)[number][0];
 
 export interface UnderwritingTaxes {
   land_assumptions_pct: string | null;
@@ -119,6 +170,18 @@ export interface SaveUnderwritingPayload {
   purchase_details?: PurchaseDetails;
   forecasted_revenue?: ForecastedRevenue;
   taxes?: Pick<UnderwritingTaxes, "land_assumptions_pct" | "sla_multiplier_pct" | "bonus_amount_pct" | "tax_rate_pct">;
+  optimization_items?: OptimizationItem[];
+  operating_expenses?: OperatingExpense[];
+  tags?: Record<DealTagKey, boolean>;
+}
+
+export interface MarketRead {
+  id: number;
+  name: string;
+  state: string | null;
+  region: string | null;
+  description: string | null;
+  property_count: number;
 }
 
 export interface SubmissionRead {

@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { SaveUnderwritingPayload, UnderwritingRead } from "@/lib/api/types";
+import { DealTagsEditor } from "./deal-tags-editor";
+import { LineItemsEditor, type EditableLineItem } from "./line-items-editor";
+import { DEAL_TAGS, type DealTagKey, type SaveUnderwritingPayload, type UnderwritingRead } from "@/lib/api/types";
 
 type FormValues = {
   purchasePrice: string;
@@ -94,6 +96,9 @@ function NumberField({ label, value, onChange, suffix, min = 0, max, step = "0.0
 export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting: UnderwritingRead }) {
   const router = useRouter();
   const [values, setValues] = useState(() => initialValues(initialUnderwriting));
+  const [optimizationItems, setOptimizationItems] = useState<EditableLineItem[]>(() => initialUnderwriting.optimization_items.map((item) => ({ key: `saved-${item.id}`, label: item.category ?? "", amount: item.total_price ?? "" })));
+  const [operatingExpenses, setOperatingExpenses] = useState<EditableLineItem[]>(() => initialUnderwriting.operating_expenses.map((item) => ({ key: `saved-${item.id}`, label: item.expense_name ?? "", amount: item.monthly_amount ?? "" })));
+  const [tags, setTags] = useState<Record<DealTagKey, boolean>>(() => Object.fromEntries(DEAL_TAGS.map(([key]) => [key, initialUnderwriting[key] ?? false])) as Record<DealTagKey, boolean>);
   const [underwriting, setUnderwriting] = useState(initialUnderwriting);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -103,13 +108,32 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function update(field: keyof FormValues, value: string) {
-    setValues((current) => ({ ...current, [field]: value }));
+  function markDirty() {
     setHasUnsavedChanges(true);
     setConfirming(false);
     setMessage(null);
     setError(null);
     setSubmitError(null);
+  }
+
+  function update(field: keyof FormValues, value: string) {
+    setValues((current) => ({ ...current, [field]: value }));
+    markDirty();
+  }
+
+  function changeOptimizationItems(items: EditableLineItem[]) {
+    setOptimizationItems(items);
+    markDirty();
+  }
+
+  function changeOperatingExpenses(items: EditableLineItem[]) {
+    setOperatingExpenses(items);
+    markDirty();
+  }
+
+  function changeTags(values: Record<DealTagKey, boolean>) {
+    setTags(values);
+    markDirty();
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -181,10 +205,16 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
       };
     }
 
-    if (Object.keys(payload).length === 0) {
-      setError("Complete at least one section before saving.");
+    const invalidOptimization = optimizationItems.some((item) => !item.label.trim() || item.amount === "" || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0);
+    const invalidExpense = operatingExpenses.some((item) => !item.label.trim() || item.amount === "" || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0);
+    if (invalidOptimization || invalidExpense) {
+      setError("Enter a name and a valid amount for every setup cost and monthly expense, or remove incomplete rows.");
       return;
     }
+
+    payload.optimization_items = optimizationItems.map((item) => ({ category: item.label.trim(), total_price: item.amount }));
+    payload.operating_expenses = operatingExpenses.map((item) => ({ expense_name: item.label.trim(), monthly_amount: item.amount }));
+    payload.tags = tags;
 
     setSaving(true);
     setError(null);
@@ -227,12 +257,17 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
   }
 
   const hasCalculation = underwriting.total_oop !== null;
+  const scenarioRows = [
+    { label: "Low", revenue: underwriting.low_gross_revenue, details: underwriting.detail?.forecasted_revenue?.scenarios.low, cashOnCash: underwriting.l_cash_on_cash },
+    { label: "Mid", revenue: underwriting.mid_gross_revenue, details: underwriting.detail?.forecasted_revenue?.scenarios.mid, cashOnCash: underwriting.m_cash_on_cash },
+    { label: "High", revenue: underwriting.high_gross_revenue, details: underwriting.detail?.forecasted_revenue?.scenarios.high, cashOnCash: underwriting.h_cash_on_cash },
+  ];
 
   return (
     <div className="space-y-5">
       <form onSubmit={save} className="space-y-5">
         <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200 sm:p-7">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">01 · PURCHASE</p><h2 className="mt-2 text-xl font-semibold">Purchase details</h2><p className="mt-1 text-sm text-slate-600">Set your financing assumptions for this property.</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">FINANCIALS · PURCHASE</p><h2 className="mt-2 text-xl font-semibold">Purchase details</h2><p className="mt-1 text-sm text-slate-600">Set your financing assumptions for this property.</p></div>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <NumberField label="Purchase price" value={values.purchasePrice} onChange={(value) => update("purchasePrice", value)} suffix="$" min={1} />
             <NumberField label="Down payment" value={values.downPayment} onChange={(value) => update("downPayment", value)} suffix="%" max={100} />
@@ -243,7 +278,24 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
         </Card>
 
         <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200 sm:p-7">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">02 · REVENUE</p><h2 className="mt-2 text-xl font-semibold">Annual revenue forecast</h2><p className="mt-1 text-sm text-slate-600">Your Mid estimate is compared with the hidden analyst reference after submission.</p></div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">FINANCIALS · COSTS</p><h2 className="mt-2 text-xl font-semibold">Setup and running costs</h2><p className="mt-1 text-sm text-slate-600">One-time setup spend increases cash invested. Monthly costs reduce annual operating income.</p></div>
+          <div className="mt-6"><LineItemsEditor title="Setup costs" description="Furniture, amenities, renovation, or other one-time spending" nameLabel="Category" amountLabel="Total cost" addLabel="Add setup cost" items={optimizationItems} onChange={changeOptimizationItems} /></div>
+          <div className="my-7 border-t border-slate-100" />
+          <LineItemsEditor title="Operating expenses" description="Recurring costs paid each month" nameLabel="Expense name" amountLabel="Monthly amount" addLabel="Add expense" items={operatingExpenses} onChange={changeOperatingExpenses} />
+        </Card>
+
+        <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200 sm:p-7">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">FINANCIALS · TAX</p><h2 className="mt-2 text-xl font-semibold">Tax assumptions</h2><p className="mt-1 text-sm text-slate-600">The backend needs these values to calculate returns.</p></div>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <NumberField label="Land assumption" value={values.landAssumptions} onChange={(value) => update("landAssumptions", value)} suffix="%" max={100} />
+            <NumberField label="Short-life asset multiplier" value={values.slaMultiplier} onChange={(value) => update("slaMultiplier", value)} suffix="%" max={100} />
+            <NumberField label="Bonus depreciation" value={values.bonusAmount} onChange={(value) => update("bonusAmount", value)} suffix="%" max={100} />
+            <NumberField label="Tax rate" value={values.taxRate} onChange={(value) => update("taxRate", value)} suffix="%" max={100} />
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200 sm:p-7">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">ANALYSIS · REVENUE</p><h2 className="mt-2 text-xl font-semibold">Annual revenue forecast</h2><p className="mt-1 text-sm text-slate-600">Your Mid estimate is compared with the hidden analyst reference after submission.</p></div>
           <div className="mt-6 grid gap-5 sm:grid-cols-3">
             <NumberField label="Low scenario" value={values.lowRevenue} onChange={(value) => update("lowRevenue", value)} suffix="$" hint="Conservative annual revenue" />
             <NumberField label="Mid scenario" value={values.midRevenue} onChange={(value) => update("midRevenue", value)} suffix="$" hint="Your expected annual revenue" />
@@ -256,13 +308,8 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
         </Card>
 
         <Card className="rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200 sm:p-7">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">03 · TAX</p><h2 className="mt-2 text-xl font-semibold">Tax assumptions</h2><p className="mt-1 text-sm text-slate-600">The backend needs these values to calculate returns.</p></div>
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <NumberField label="Land assumption" value={values.landAssumptions} onChange={(value) => update("landAssumptions", value)} suffix="%" max={100} />
-            <NumberField label="Short-life asset multiplier" value={values.slaMultiplier} onChange={(value) => update("slaMultiplier", value)} suffix="%" max={100} />
-            <NumberField label="Bonus depreciation" value={values.bonusAmount} onChange={(value) => update("bonusAmount", value)} suffix="%" max={100} />
-            <NumberField label="Tax rate" value={values.taxRate} onChange={(value) => update("taxRate", value)} suffix="%" max={100} />
-          </div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">DEAL TAGS</p><h2 className="mt-2 text-xl font-semibold">Describe the deal</h2><p className="mt-1 text-sm text-slate-600">Select any labels that fit. Tags do not affect your score.</p></div>
+          <div className="mt-6"><DealTagsEditor values={tags} onChange={changeTags} /></div>
         </Card>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -281,7 +328,8 @@ export function UnderwritingForm({ initialUnderwriting }: { initialUnderwriting:
             <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Price to revenue ratio</p><p className="mt-1 text-xl font-semibold">{percent(underwriting.prr)}</p></div>
             <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Estimated tax savings</p><p className="mt-1 text-xl font-semibold">{money(underwriting.taxes?.tax_savings ?? null)}</p></div>
           </div>
-          <div className="mt-5 overflow-x-auto"><table className="w-full min-w-100 text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th className="pb-3 font-medium">Scenario</th><th className="pb-3 font-medium">Annual revenue</th><th className="pb-3 font-medium">Cash on cash</th></tr></thead><tbody className="divide-y divide-slate-100"><tr><th className="py-3 font-medium">Low</th><td>{money(underwriting.low_gross_revenue)}</td><td>{percent(underwriting.l_cash_on_cash)}</td></tr><tr><th className="py-3 font-medium">Mid</th><td>{money(underwriting.mid_gross_revenue)}</td><td>{percent(underwriting.m_cash_on_cash)}</td></tr><tr><th className="py-3 font-medium">High</th><td>{money(underwriting.high_gross_revenue)}</td><td>{percent(underwriting.h_cash_on_cash)}</td></tr></tbody></table></div>
+          <p className="mt-5 text-sm text-slate-600">Includes {money(underwriting.optimization_total)} in setup costs and {money(underwriting.operating_expense_total)} in monthly operating expenses.</p>
+          <div className="mt-5 overflow-x-auto"><table className="w-full min-w-160 text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500"><th className="pb-3 font-medium">Scenario</th><th className="pb-3 font-medium">Revenue</th><th className="pb-3 font-medium">NOI</th><th className="pb-3 font-medium">Free cash flow</th><th className="pb-3 font-medium">Cash on cash</th></tr></thead><tbody className="divide-y divide-slate-100">{scenarioRows.map((row) => <tr key={row.label}><th className="py-3 font-medium">{row.label}</th><td>{money(row.revenue)}</td><td>{money(row.details?.net_operating_income ?? null)}</td><td>{money(row.details?.annual_free_cash_flow ?? null)}</td><td>{percent(row.cashOnCash)}</td></tr>)}</tbody></table></div>
         </Card>
       )}
 

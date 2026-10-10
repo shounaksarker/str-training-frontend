@@ -7,8 +7,9 @@ import { CaseHeader } from "@/features/training/components/case-header";
 import { StartCaseButton } from "@/features/training/components/start-case-button";
 import { BackendApiError } from "@/lib/api/client";
 import { getDashboard } from "@/lib/api/dashboard";
+import { getMarket } from "@/lib/api/markets";
 import { getProperty } from "@/lib/api/properties";
-import type { DashboardProperty, PropertyRead } from "@/lib/api/types";
+import type { DashboardProperty, MarketRead, PropertyRead } from "@/lib/api/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,18 @@ export default async function PropertyPage({ params }: { params: Promise<{ zpid:
   const { zpid } = await params;
   let property: PropertyRead;
   let progress: DashboardProperty | undefined;
+  let market: MarketRead | null = null;
 
   try {
     const [propertyResult, dashboard] = await Promise.all([getProperty(zpid), getDashboard()]);
     property = propertyResult;
     progress = dashboard.properties.find((item) => item.zpid === zpid);
+    if (property.market) {
+      market = await getMarket(property.market.id).catch((error) => {
+        console.error("Unable to load market context", error);
+        return null;
+      });
+    }
   } catch (error) {
     if (error instanceof BackendApiError && error.status === 404) notFound();
     console.error("Unable to render property", error);
@@ -60,6 +68,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ zpid:
                 {property.area !== null && <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-200"><Ruler className="size-4 text-slate-500" />{property.area.toLocaleString()} sq ft</span>}
               </div>
             </div>
+            {market && <Card className="mt-7 rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200"><p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal-700">MARKET CONTEXT</p><h2 className="mt-2 text-lg font-semibold">{market.name}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{market.description ?? "Explore this market while preparing your forecast."}</p><p className="mt-3 text-xs text-slate-500">{market.property_count} training {market.property_count === 1 ? "property" : "properties"} in this market</p></Card>}
             {property.detail_url && <a href={property.detail_url} target="_blank" rel="noopener noreferrer" className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-900">View original listing <ArrowUpRight aria-hidden="true" className="size-4" /></a>}
           </div>
           <Card className="h-fit rounded-2xl border-0 p-6 shadow-sm ring-1 ring-slate-200">
