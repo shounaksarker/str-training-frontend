@@ -21,13 +21,17 @@ Open http://localhost:3000. The backend can be started from `../strs_fe_assessme
 
 ## Current milestone
 
-The Next.js, TypeScript, and Tailwind foundation is in place. The dashboard, underwriting workflow, API integration, shadcn/ui components, and Playwright tests will be added in reviewable steps.
+The Next.js, TypeScript, Tailwind, and shadcn/ui foundation is in place. The dashboard shows live case status, progress, and previous scores. Property details and draft creation now call the backend through Next.js BFF routes. The financial form, submission flow, and Playwright tests will be added in reviewable steps.
+
+Set `BACKEND_API_URL` in `.env.local` if the backend is not at `http://127.0.0.1:8000`. The browser will call this app's `/api/dashboard`; only the server reads the backend URL. While the backend is running, `curl http://localhost:3000/api/dashboard` should return its seeded properties after starting `npm run dev`.
+
+Sample listing images from the backend are not shown because they are unrelated placeholder photos.
 
 ## Planned structure
 
 - `src/app` — routes, layouts, and the small Next.js BFF layer
 - `src/features/training` — dashboard, underwriting form, review, and result components
 - `src/components/ui` — reusable shadcn/ui primitives
-- `src/lib/api` — typed API calls and endpoint constants
+- `src/lib/api` — typed backend calls and endpoint constants
 
 The backend is responsible for underwriting calculations and scoring. The frontend will convert displayed percentages to fractional API values and present the backend's calculated results.
