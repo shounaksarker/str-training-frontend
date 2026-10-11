@@ -1,10 +1,10 @@
 # STR Training Frontend
 
-A Next.js frontend for the short-term rental underwriting assessment. Trainees choose a property, save an investment forecast, submit it, and compare their Mid annual revenue estimate with an analyst reference. This repository sits beside the supplied `strs_fe_assessment_v1/backend` project. `nextjs-nucleus` was used as an architectural reference; this is a separate app.
+A Next.js frontend for the short-term rental underwriting assessment. Trainees choose a property, save an investment forecast, submit it, and compare their Mid annual revenue estimate with an analyst reference. This repository sits beside the [provided backend repository](https://github.com/fahimstrsearch/strs_fe_assessment_v1). `nextjs-nucleus` was used as an architectural reference; this is a separate app.
 
 ## Run locally
 
-Requirements: Node.js 22, npm, Docker for the supplied backend. From the assessment workspace root:
+Requirements: Node.js 22, npm, Docker for the supplied backend. Clone the [backend repository](https://github.com/fahimstrsearch/strs_fe_assessment_v1) as a sibling folder named `strs_fe_assessment_v1` if it is not already present. From the common parent folder:
 
 ```bash
 cd strs_fe_assessment_v1/backend
@@ -22,7 +22,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. The `.env.example` value is `BACKEND_API_URL=http://127.0.0.1:8000`; change it in `.env.local` if the backend runs elsewhere. If port 3000 is busy, use `npm run dev -- --port 3001` and open http://localhost:3001. The backend's first Docker start migrates and seeds six sample properties across four markets. See its own README for Docker troubleshooting and port overrides.
+Open http://localhost:3000. The `.env.example` value is `BACKEND_API_URL=http://localhost:8000`. The backend's first Docker start migrates and seeds six sample properties across four markets. See its own README for Docker troubleshooting and port overrides.
 
 Quick checks:
 
@@ -66,7 +66,7 @@ The UI uses Next.js 16 App Router, React, TypeScript, Tailwind CSS, and shadcn/u
 
 ## Calculation and scoring
 
-The backend calculates the investment figures from saved assumptions. In particular, total out-of-pocket cash is the down payment + closing costs + one-time setup costs. For each revenue scenario, NOI subtracts annual operating expenses and co-hosting fees; annual free cash flow subtracts annual debt service from NOI. Cash-on-cash return divides free cash flow by out-of-pocket cash. The backend also applies its scenario expense multipliers and tax depreciation assumptions. See `../strs_fe_assessment_v1/backend/app/services/underwriting_calculator.py` for the full formulas and rounding rules.
+The backend calculates the investment figures from saved assumptions. In particular, total out-of-pocket cash is the down payment + closing costs + one-time setup costs. For each revenue scenario, NOI subtracts annual operating expenses and co-hosting fees; annual free cash flow subtracts annual debt service from NOI. Cash-on-cash return divides free cash flow by out-of-pocket cash. The backend also applies its scenario expense multipliers and tax depreciation assumptions. See the [backend calculator](https://github.com/fahimstrsearch/strs_fe_assessment_v1/blob/main/backend/app/services/underwriting_calculator.py) for the full formulas and rounding rules.
 
 Only the **Mid annual revenue forecast** affects the training score:
 
@@ -96,5 +96,3 @@ For the first browser test run after `npm ci`, install Chromium with `npx playwr
 The mock resets before each test and supplies one property and a fixed $125,000 analyst Mid forecast. Four browser tests cover the complete dashboard → property → draft → submission → result journey for 100, 70, and 40 scores; draft persistence for costs and a tag; and invalid revenue/expense entries. The mock returns representative calculation and rating responses for UI testing; it is not a second calculation engine. Backend calculation and scoring are covered by the supplied backend's own tests.
 
 On failure, Playwright saves screenshots and traces in `test-results/` and an HTML report in `playwright-report/`. Inspect them with `npx playwright show-report` or `npx playwright show-trace test-results/<test-name>/trace.zip`. Those generated directories are ignored by Git.
-
-For a recording outline and submission handoff, see [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
