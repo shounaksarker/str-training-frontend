@@ -64,6 +64,13 @@ Server-rendered pages call the shared API client. Browser actions such as creati
 
 The UI uses Next.js 16 App Router, React, TypeScript, Tailwind CSS, and shadcn/ui components. Listing images are omitted because the provided sample image URLs are unrelated placeholder photos.
 
+## Design decisions
+
+* **Domain mental model**: Organized sections to follow the underwriting chain: Upfront Capital (*Total Out of Pocket*) → Operations (*OPEX & NOI*) → Scenarios & Returns (*Cash-on-Cash*).
+* **Reduced cognitive load**: Trainees input natural percentages (e.g. `20` for `20%`), which are automatically normalized to decimals (`0.20`) for the API.
+* **Safety guardrails**: A calculation snapshot is presented for review before submission, backed by a confirmation modal since finalized attempts become read-only.
+* **Focused aesthetics**: High-density financial typography, clear status indicators, and clean layout without distracting placeholder stock photos.
+
 ## Calculation and scoring
 
 The backend calculates the investment figures from saved assumptions. In particular, total out-of-pocket cash is the down payment + closing costs + one-time setup costs. For each revenue scenario, NOI subtracts annual operating expenses and co-hosting fees; annual free cash flow subtracts annual debt service from NOI. Cash-on-cash return divides free cash flow by out-of-pocket cash. The backend also applies its scenario expense multipliers and tax depreciation assumptions. See the [backend calculator](https://github.com/fahimstrsearch/strs_fe_assessment_v1/blob/main/backend/app/services/underwriting_calculator.py) for the full formulas and rounding rules.
@@ -96,3 +103,10 @@ For the first browser test run after `npm ci`, install Chromium with `npx playwr
 The mock resets before each test and supplies one property and a fixed $125,000 analyst Mid forecast. Four browser tests cover the complete dashboard → property → draft → submission → result journey for 100, 70, and 40 scores; draft persistence for costs and a tag; and invalid revenue/expense entries. The mock returns representative calculation and rating responses for UI testing; it is not a second calculation engine. Backend calculation and scoring are covered by the supplied backend's own tests.
 
 On failure, Playwright saves screenshots and traces in `test-results/` and an HTML report in `playwright-report/`. Inspect them with `npx playwright show-report` or `npx playwright show-trace test-results/<test-name>/trace.zip`. Those generated directories are ignored by Git.
+
+## Tradeoffs and limitations
+
+* **Single-tenant scope**: Matching the provided backend, there is no authentication or multi-tenant session isolation; all drafts and attempts share the database.
+* **Thin BFF layer**: The frontend BFF handles route-level input validation and error mapping, leaving core financial calculations and scoring to FastAPI as the single source of truth.
+* **Mock-based E2E suite**: Browser tests use a lightweight in-process mock server to ensure fast, deterministic, zero-dependency test execution without requiring Docker.
+
