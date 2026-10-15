@@ -110,3 +110,9 @@ On failure, Playwright saves screenshots and traces in `test-results/` and an HT
 * **Thin BFF layer**: The frontend BFF handles route-level input validation and error mapping, leaving core financial calculations and scoring to FastAPI as the single source of truth.
 * **Mock-based E2E suite**: Browser tests use a lightweight in-process mock server to ensure fast, deterministic, zero-dependency test execution without requiring Docker.
 
+## Video walkthrough
+
+* **Walkthrough recording**: [Watch Video on Google Drive](https://drive.google.com/file/d/1VPRGTixdRkPj0rSOEjWtsza15VAI3Sea/view?usp=sharing)
+* **Topics covered**: Workflow demo (dashboard to graded result), key UX decisions, form validation strategy, and Playwright test execution.
+
+
